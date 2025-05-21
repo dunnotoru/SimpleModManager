@@ -53,12 +53,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                        .WhereNotNull()
                        .Select(path => new Modpack(path))
                        .ToProperty(this, vm => vm.SelectedModpack);
-
         
         _watcher = new FileSystemWatcher(_storageDirectory);
-        _watcher.NotifyFilter = NotifyFilters.FileName;
         _watcher.Created += OnCreated;
         _watcher.Deleted += OnDeleted;
+        _watcher.EnableRaisingEvents = true;
 
         string[] dirs = Directory.GetDirectories(_storageDirectory);
         ModpackDirectories = new ObservableCollection<string>(dirs);
@@ -68,12 +67,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnDeleted(object sender, FileSystemEventArgs e)
     {
-        if (!Directory.Exists(e.FullPath))
-        {
-            return;
-        }
-        
-        ModpackDirectories.Add(e.FullPath);
+        ModpackDirectories.Remove(e.FullPath);
     }
 
     private void OnCreated(object sender, FileSystemEventArgs e)
@@ -83,7 +77,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
         
-        ModpackDirectories.Remove(e.FullPath);
+        ModpackDirectories.Add(e.FullPath);
     }
 
     private void DumpCurrentImpl()
@@ -152,7 +146,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
 public class Modpack : ViewModelBase
 {
-    public string ModpackDirectory;
+    public string ModpackDirectory { get; }
 
     private ObservableCollection<string> _mods = new ObservableCollection<string>();
 
@@ -165,7 +159,7 @@ public class Modpack : ViewModelBase
     public Modpack(string modpackDirectory)
     {
         ModpackDirectory = modpackDirectory;
-        string[] mods = Directory.GetFiles(ModpackDirectory, "*.jar", SearchOption.AllDirectories); 
+        string[] mods = Directory.GetFiles(Path.Combine(ModpackDirectory, "mods"), "*.jar", SearchOption.AllDirectories); 
         Mods = new ObservableCollection<string>(mods);
     }
 }
