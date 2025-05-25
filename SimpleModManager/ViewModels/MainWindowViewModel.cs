@@ -1,9 +1,16 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Text.Json;
 using ReactiveUI;
+using SukiUI.Controls;
+using SukiUI.Dialogs;
+using SukiUI.MessageBox;
 
 namespace SimpleModManager.ViewModels;
 
@@ -13,46 +20,48 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private string _storageDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".smmanager");
 
+    private const string ModsDirName = "mods";
+    private const string ConfigDirName = "config";
+
+    private string GameModsDir => Path.Combine(_gameDirectory, ModsDirName);
+    private string GameConfigDir => Path.Combine(_gameDirectory, ConfigDirName);
+
     public string GameDirectory
     {
         get => _gameDirectory;
         set => this.RaiseAndSetIfChanged(ref _gameDirectory, value);
     }
 
-    private ObservableCollection<string> _modpackDirectories = new ObservableCollection<string>();
+    private ObservableCollection<Modpack> _modpacks = new ObservableCollection<Modpack>();
 
-    public ObservableCollection<string> ModpackDirectories
+    public ObservableCollection<Modpack> Modpacks
     {
-        get => _modpackDirectories;
-        set => this.RaiseAndSetIfChanged(ref _modpackDirectories, value);
+        get => _modpacks;
+        set => this.RaiseAndSetIfChanged(ref _modpacks, value);
+    }
+    
+    private Modpack? _selectedModpack;
+
+    public Modpack? SelectedModpack
+    {
+        get => _selectedModpack;
+        set => this.RaiseAndSetIfChanged(ref _selectedModpack, value);
     }
 
-    private string? _selectedDirectory;
-
-    public string? SelectedDirectory
-    {
-        get => _selectedDirectory;
-        set => this.RaiseAndSetIfChanged(ref _selectedDirectory, value);
-    }
-
-    private readonly ObservableAsPropertyHelper<Modpack?> _selectedModpack;
-    public Modpack? SelectedModpack => _selectedModpack.Value;
-
-    public ReactiveCommand<string, Unit> SetupModpack { get; }
+    public ReactiveCommand<Modpack, Unit> SaveModpack { get; }
+    public ReactiveCommand<Modpack, Unit> LoadModpack { get; }
     public ReactiveCommand<Unit, Unit> CreateModpack { get; }
     public ReactiveCommand<Unit, Unit> DumpCurrent { get; }
-    
+    public ISukiDialogManager DialogManager { get; }
+
     private FileSystemWatcher _watcher;
 
     public MainWindowViewModel()
     {
-        SetupModpack = ReactiveCommand.Create<string, Unit>(SetupModpackImpl);
+        DialogManager = new SukiDialogManager();
+        LoadModpack = ReactiveCommand.Create<Modpack, Unit>(LoadModpackImpl);
         CreateModpack = ReactiveCommand.Create(CreateModpackImpl);
         DumpCurrent = ReactiveCommand.Create(DumpCurrentImpl);
-        _selectedModpack = this.WhenAnyValue(vm => vm.SelectedDirectory)
-                       .WhereNotNull()
-                       .Select(path => new Modpack(path))
-                       .ToProperty(this, vm => vm.SelectedModpack);
         
         _watcher = new FileSystemWatcher(_storageDirectory);
         _watcher.Created += OnCreated;
@@ -60,14 +69,23 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _watcher.EnableRaisingEvents = true;
 
         string[] dirs = Directory.GetDirectories(_storageDirectory);
-        ModpackDirectories = new ObservableCollection<string>(dirs);
+        Modpacks = new ObservableCollection<Modpack>(ReadFromStorage());
 
         Directory.CreateDirectory(_storageDirectory);
     }
 
+    private IEnumerable<Modpack> ReadFromStorage()
+    {
+        return Directory.GetDirectories(_storageDirectory).Select(dir => new Modpack(dir));
+    }
+
     private void OnDeleted(object sender, FileSystemEventArgs e)
     {
-        ModpackDirectories.Remove(e.FullPath);
+        Modpack? stored = Modpacks.FirstOrDefault(m => m.ModpackDirectory == e.FullPath);
+        if (stored is not null)
+        {
+            Modpacks.Remove(stored);
+        }
     }
 
     private void OnCreated(object sender, FileSystemEventArgs e)
@@ -77,34 +95,35 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
         
-        ModpackDirectories.Add(e.FullPath);
+        Modpacks.Add(new Modpack(e.FullPath));
     }
 
     private void DumpCurrentImpl()
     {
-        const string modsDir = "mods";
-        const string configDir = "config";
-        string path = Path.Combine(_storageDirectory, Guid.NewGuid().ToString());
-        DirectoryInfo createdDir = Directory.CreateDirectory(path);
-        CopyDirectory(Path.Combine(_gameDirectory, modsDir), Path.Combine(createdDir.FullName, modsDir), true);
-        CopyDirectory(Path.Combine(_gameDirectory, configDir), Path.Combine(createdDir.FullName, configDir), true);
+        DumpModpackForm form = new DumpModpackForm();
+        DialogManager.CreateDialog()
+            .WithTitle("Dump Current Modpack")
+            .WithContent(form)
+            .Dismiss().ByClickingBackground()
+            .WithActionButton("Dump", dialog =>
+            {
+                //validate dirname
+                
+                string path = Path.Combine(_storageDirectory, form.DirName);
+                DirectoryInfo createdDir = Directory.CreateDirectory(path);
+                CopyDirectory(Path.Combine(_gameDirectory, ModsDirName), Path.Combine(createdDir.FullName, ModsDirName), true);
+                CopyDirectory(Path.Combine(_gameDirectory, ConfigDirName), Path.Combine(createdDir.FullName, ConfigDirName), true);
+            }, true, "Flat", "Accent")
+            .TryShow();
     }
-
+    
     private void CreateModpackImpl()
     {
         
     }
 
-    private Unit SetupModpackImpl(string directory)
+    private Unit LoadModpackImpl(Modpack modpack)
     {
-        DirectoryInfo info = new DirectoryInfo(directory);
-        if (info.Exists == false)
-        {
-            return Unit.Default;
-        }
-
-        CopyDirectory(info.FullName, _gameDirectory, true);
-
         return Unit.Default;
     }
 
@@ -134,32 +153,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
         _watcher.Dispose();
-        _selectedModpack.Dispose();
-        SetupModpack.Dispose();
+        LoadModpack.Dispose();
         CreateModpack.Dispose();
         DumpCurrent.Dispose();
-    }
-}
-
-public class Modpack : ViewModelBase
-{
-    public string ModpackDirectory { get; }
-
-    private ObservableCollection<string> _mods = new ObservableCollection<string>();
-
-    public ObservableCollection<string> Mods
-    {
-        get => _mods;
-        set => this.RaiseAndSetIfChanged(ref _mods, value);
-    }
-
-    public Modpack(string modpackDirectory)
-    {
-        ModpackDirectory = modpackDirectory;
-        string[] mods = Directory.GetFiles(Path.Combine(ModpackDirectory, "mods"), "*.jar", SearchOption.AllDirectories); 
-        Mods = new ObservableCollection<string>(mods);
     }
 }

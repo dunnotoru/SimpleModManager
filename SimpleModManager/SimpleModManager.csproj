@@ -26,4 +26,8 @@
     <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.0"/>
     <PackageReference Include="SukiUI" Version="6.0.2" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaXaml Remove="Assets\FormTemplates.axaml" />
+  </ItemGroup>
 </Project>
