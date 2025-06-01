@@ -12,13 +12,19 @@
                  x:Class="SimpleModManager.Views.MainWindow"
                  x:DataType="vm:MainWindowViewModel"
                  Icon="/Assets/avalonia-logo.ico"
-                 Title="SimpleModManager">
+                 Title="SimpleModManager"
+                 BackgroundStyle="Bubble">
 
   <Design.DataContext>
     <vm:MainWindowViewModel />
   </Design.DataContext>
 
+  <suki:SukiWindow.MenuItems>
+
+  </suki:SukiWindow.MenuItems>
+
   <suki:SukiWindow.Hosts>
+    <suki:SukiToastHost Manager="{Binding ToastManager}" />
     <suki:SukiDialogHost Manager="{Binding DialogManager}">
       <suki:SukiDialogHost.DataTemplates>
         <DataTemplate DataType="{x:Type vm:DumpModpackForm}">
@@ -47,14 +53,15 @@
                  SelectionMode="Single">
           <ListBox.ItemTemplate>
             <DataTemplate>
-              <DockPanel>
+              <DockPanel Margin="10">
                 <Image DockPanel.Dock="Left"
                        Margin="5"
                        Width="100"
                        Height="100"
                        Source="{Binding Logo}"
                        Stretch="Fill" />
-                <TextBlock Text="{Binding Name}"
+                <TextBlock Margin="5"
+                           Text="{Binding Name}"
                            Foreground="White"
                            TextWrapping="Wrap" />
               </DockPanel>
@@ -110,5 +117,6 @@
         </DockPanel>
       </suki:GroupBox>
     </suki:GlassCard>
+
   </Grid>
 </suki:SukiWindow>
