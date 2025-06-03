@@ -48,26 +48,28 @@
           <TextBlock Classes="h4"
                      Text="Detected modpacks" />
         </suki:GroupBox.Header>
-        <ListBox ItemsSource="{Binding Modpacks}"
-                 SelectedItem="{Binding SelectedModpack}"
-                 SelectionMode="Single">
-          <ListBox.ItemTemplate>
-            <DataTemplate>
-              <DockPanel Margin="10">
-                <Image DockPanel.Dock="Left"
-                       Margin="5"
-                       Width="100"
-                       Height="100"
-                       Source="{Binding Logo}"
-                       Stretch="Fill" />
-                <TextBlock Margin="5"
-                           Text="{Binding Name}"
-                           Foreground="White"
-                           TextWrapping="Wrap" />
-              </DockPanel>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <suki:BusyArea IsBusy="{Binding !IsListLoaded}">
+          <ListBox ItemsSource="{Binding Modpacks}"
+                   SelectedItem="{Binding SelectedModpack}"
+                   SelectionMode="Single">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <DockPanel Margin="10">
+                  <Image DockPanel.Dock="Left"
+                         Margin="5"
+                         Width="100"
+                         Height="100"
+                         Source="{Binding Logo}"
+                         Stretch="Fill" />
+                  <TextBlock Margin="5"
+                             Text="{Binding Name}"
+                             Foreground="White"
+                             TextWrapping="Wrap" />
+                </DockPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </suki:BusyArea>
       </suki:GroupBox>
     </suki:GlassCard>
 
@@ -91,6 +93,7 @@
           <TextBlock Classes="h4"
                      Text="Modpack details" />
         </suki:GroupBox.Header>
+
         <DockPanel DataContext="{Binding SelectedModpack}">
           <TextBlock DockPanel.Dock="Top">
             <Run Text="Directory:"
@@ -102,18 +105,28 @@
                  FontWeight="Heavy" />
             <Run Text="{Binding Name}" />
           </TextBlock>
-          <TextBlock DockPanel.Dock="Top"
-                     Classes="h5"
-                     FontWeight="Heavy"
-                     Text="Mod List">
-          </TextBlock>
-          <ItemsControl ItemsSource="{Binding Mods}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding}" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+
+          <TabControl DockPanel.Dock="Top">
+            <TabItem Header="Mods">
+              <StackPanel>
+                <TextBlock Classes="h5"
+                           FontWeight="Heavy"
+                           Text="Mod List" />
+                  <ItemsControl ItemsSource="{Binding Mods}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+              </StackPanel>
+            </TabItem>
+            <TabItem Header="Files">
+              <TreeView>
+
+              </TreeView>
+            </TabItem>
+          </TabControl>
         </DockPanel>
       </suki:GroupBox>
     </suki:GlassCard>
