@@ -1,23 +1,29 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reactive.Disposables;
 using Avalonia.Media.Imaging;
 using ReactiveUI;
 using SimpleModManager.Models;
+using SimpleModManager.Services;
 
 namespace SimpleModManager.ViewModels;
 
-public class ModpackViewModel : ViewModelBase
+
+
+public class ModpackViewModel : ViewModelBase, IActivatableViewModel
 {
+    public ViewModelActivator Activator { get; } = new ViewModelActivator();
     public ManifestInfo Manifest { get; }
     public string ModpackDirectory { get; }
     public string Author { get; set; }
     public string Version { get; set; }
     public string Name { get; }
-    public Bitmap? Logo { get; }
+    public Bitmap? Logo { get; private set; }
 
-    private ObservableCollection<string> _mods = new ObservableCollection<string>();
+    private ObservableCollection<FolderItem> _folderContents = new ObservableCollection<FolderItem>();
 
     public ModpackViewModel(ManifestInfo manifest)
     {
@@ -26,14 +32,26 @@ public class ModpackViewModel : ViewModelBase
         Name = manifest.Name ?? "Unnamed";
         Author = manifest.Author ?? "None";
         Version = manifest.Version ?? "None";
-        _mods = new ObservableCollection<string>(manifest.Files);
+        
+        Debug.WriteLine("MODPACK CTOR YAYYYYYY");
+        this.WhenActivated((CompositeDisposable d) =>
+        {
+            Debug.WriteLine("MODPACK ACTIVATED YAYYYYYY");
+            Directory.CreateDirectory(ModpackDirectory);
+            FolderContents = new ObservableCollection<FolderItem>(FolderTreeLoader.LoadFolderContents(ModpackDirectory));
+            string iconPath = Path.Combine(ModpackDirectory, "icon.png");
+            if (File.Exists(iconPath))
+            {
+                Logo = new Bitmap(iconPath);
+            }
+        });
     }
-
-
-    public ObservableCollection<string> Mods
+    
+    
+    public ObservableCollection<FolderItem> FolderContents
     {
-        get => _mods;
-        set => this.RaiseAndSetIfChanged(ref _mods, value);
+        get => _folderContents;
+        set => this.RaiseAndSetIfChanged(ref _folderContents, value);
     }
 
     protected override void Dispose(bool dispoing)

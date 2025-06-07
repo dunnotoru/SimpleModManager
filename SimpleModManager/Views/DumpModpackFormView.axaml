@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:SimpleModManager.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             mc:Ignorable="d"
+             d:DesignWidth="800"
+             d:DesignHeight="450"
+             x:Class="SimpleModManager.Views.DumpModpackFormView"
+             x:DataType="{x:Type viewModels:DumpModpackForm}">
+  <StackPanel>
+    <TextBox Watermark="Name"
+             UseFloatingWatermark="True"
+             Text="{Binding Name}" />
+    <TextBox Watermark="Author"
+             UseFloatingWatermark="True"
+             Text="{Binding Author}" />
+    <Grid ColumnDefinitions="1* 1*">
+      <TextBox Margin="0 0 5 0"
+               Watermark="Version"
+               UseFloatingWatermark="True"
+               Text="{Binding Version}" />
+      <Button x:Name="DropButton"
+              Grid.Column="1"
+              Margin="5 0 0 0"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Bottom"
+              Classes="Outlined"
+              Content="Click or Drop png here"
+              Click="DropButton_OnClick"
+              DragDrop.AllowDrop="True">
+        <Button.Styles>
+          <Style Selector="Button.dropping">
+            <Setter Property="BorderThickness" Value="5" />
+          </Style>
+        </Button.Styles>
+      </Button>
+    </Grid>
+    <TreeView Margin="0 10"
+              ItemsSource="{Binding FolderItems}"
+              MaxHeight="300">
+      <TreeView.ItemTemplate>
+        <TreeDataTemplate ItemsSource="{Binding Children}">
+          <StackPanel Orientation="Horizontal">
+            <CheckBox IsChecked="{Binding IsChecked}" />
+            <PathIcon Margin="10 0 5 0"
+                      Data="{x:Static suki:Icons.FileOpen}"
+                      IsVisible="{Binding IsDirectory}" />
+            <TextBlock Margin="5 0"
+                       Text="{Binding Name}" />
+          </StackPanel>
+        </TreeDataTemplate>
+      </TreeView.ItemTemplate>
+    </TreeView>
+    <Button Margin="10"
+            HorizontalAlignment="Center"
+            Classes="Rounded Accent Flat"
+            Content="Dump"
+            Command="{Binding Dismiss}" />
+  </StackPanel>
+</UserControl>

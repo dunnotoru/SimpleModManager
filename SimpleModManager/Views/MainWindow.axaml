@@ -13,42 +13,40 @@
                  x:DataType="vm:MainWindowViewModel"
                  Icon="/Assets/avalonia-logo.ico"
                  Title="SimpleModManager"
-                 BackgroundStyle="Bubble">
+                 BackgroundStyle="Flat"
+                 IsMenuVisible="True">
 
   <Design.DataContext>
     <vm:MainWindowViewModel />
   </Design.DataContext>
 
   <suki:SukiWindow.MenuItems>
-
+    <MenuItem Header="Edit">
+      <MenuItem Header="Dump Current"
+                Command="{Binding DumpCurrent}" />
+    </MenuItem>
   </suki:SukiWindow.MenuItems>
 
   <suki:SukiWindow.Hosts>
     <suki:SukiToastHost Manager="{Binding ToastManager}" />
-    <suki:SukiDialogHost Manager="{Binding DialogManager}">
+    <suki:SukiDialogHost x:Name="DialogHost">
       <suki:SukiDialogHost.DataTemplates>
         <DataTemplate DataType="{x:Type vm:DumpModpackForm}">
-          <StackPanel>
-            <TextBox Watermark="Directory name"
-                     UseFloatingWatermark="True"
-                     Text="{Binding DirName}" />
-          </StackPanel>
+          <views:DumpModpackFormView />
         </DataTemplate>
       </suki:SukiDialogHost.DataTemplates>
     </suki:SukiDialogHost>
   </suki:SukiWindow.Hosts>
 
-  <Grid ColumnDefinitions="1*, 2*"
-        RowDefinitions="1*, 9*">
+  <Grid ColumnDefinitions="1*, 2*">
     <suki:GlassCard Grid.Column="0"
-                    Grid.Row="1"
                     Margin="10">
       <suki:GroupBox>
         <suki:GroupBox.Header>
           <TextBlock Classes="h4"
                      Text="Detected modpacks" />
         </suki:GroupBox.Header>
-        <suki:BusyArea IsBusy="{Binding !IsListLoaded}">
+        <suki:BusyArea IsBusy="{Binding !Modpacks.Count}">
           <ListBox ItemsSource="{Binding Modpacks}"
                    SelectedItem="{Binding SelectedModpack}"
                    SelectionMode="Single">
@@ -77,59 +75,35 @@
                 Grid.Row="0"
                 Margin="0 10 0 0"
                 Orientation="Horizontal">
-      <Button Content="Load"
-              Margin="0 0 10 0"
-              Command="{Binding LoadModpack}"
-              CommandParameter="{Binding SelectedModpack}" />
-      <Button Content="DumpCurrent"
-              Command="{Binding DumpCurrent}" />
+
     </StackPanel>
 
     <suki:GlassCard Grid.Column="1"
-                    Grid.Row="1"
                     Margin="10">
       <suki:GroupBox>
         <suki:GroupBox.Header>
-          <TextBlock Classes="h4"
-                     Text="Modpack details" />
+          <DockPanel LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left"
+                       Classes="h4"
+                       VerticalAlignment="Center"
+                       Text="Modpack details" />
+            <Button DockPanel.Dock="Right"
+                    Classes="Flat Rounded"
+                    Margin="10 0"
+                    Content="Load"
+                    Command="{Binding LoadModpack}"
+                    CommandParameter="{Binding SelectedModpack}" />
+            <Button DockPanel.Dock="Right"
+                    Classes="Basic"
+                    Content="Open Directory"
+                    Command="{Binding OpenDirectory}"
+                    CommandParameter="{Binding SelectedModpack}" />
+          </DockPanel>
         </suki:GroupBox.Header>
 
-        <DockPanel DataContext="{Binding SelectedModpack}">
-          <TextBlock DockPanel.Dock="Top">
-            <Run Text="Directory:"
-                 FontWeight="Heavy" />
-            <Run Text="{Binding ModpackDirectory}" />
-          </TextBlock>
-          <TextBlock DockPanel.Dock="Top">
-            <Run Text="Name: "
-                 FontWeight="Heavy" />
-            <Run Text="{Binding Name}" />
-          </TextBlock>
+        <views:ModpackView DataContext="{Binding SelectedModpack}" />
 
-          <TabControl DockPanel.Dock="Top">
-            <TabItem Header="Mods">
-              <StackPanel>
-                <TextBlock Classes="h5"
-                           FontWeight="Heavy"
-                           Text="Mod List" />
-                  <ItemsControl ItemsSource="{Binding Mods}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding}" />
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-              </StackPanel>
-            </TabItem>
-            <TabItem Header="Files">
-              <TreeView>
-
-              </TreeView>
-            </TabItem>
-          </TabControl>
-        </DockPanel>
       </suki:GroupBox>
     </suki:GlassCard>
-
   </Grid>
 </suki:SukiWindow>

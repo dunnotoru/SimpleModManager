@@ -1,22 +1,14 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using SimpleModManager.Models;
-using SimpleModManager.ViewModels;
 
 namespace SimpleModManager.Services;
 
 public class ModpackService
 {
-    private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        PropertyNameCaseInsensitive = true,
-    };
-    
     public void EnsureDataDirectoryCreated()
     {
         Directory.CreateDirectory(Config.StorageDirectory);
@@ -24,21 +16,21 @@ public class ModpackService
         {
             using StreamWriter sw = File.CreateText(Config.ConfigPath);
             ConfigData data = new ConfigData();
-            sw.WriteLine(JsonSerializer.Serialize(data, _jsonOptions));
+            sw.WriteLine(JsonSerializer.Serialize(data, Config.JsonOptions));
         }
         else
         {
             using StreamReader sr = File.OpenText(Config.ConfigPath);
-            ConfigData? data = JsonSerializer.Deserialize<ConfigData>(sr.ReadToEnd(), _jsonOptions);
+            ConfigData? data = JsonSerializer.Deserialize<ConfigData>(sr.ReadToEnd(), Config.JsonOptions);
             if (data is null)
             {
                 data = new ConfigData();
                 using StreamWriter sw = File.CreateText(Config.ConfigPath);
-                sw.WriteLine(JsonSerializer.Serialize(data, _jsonOptions));
+                sw.WriteLine(JsonSerializer.Serialize(data, Config.JsonOptions));
             }
         }
     }
-
+    
     public void LoadModpack(ManifestInfo manifest)
     {
         EnsureDataDirectoryCreated();
@@ -80,19 +72,20 @@ public class ModpackService
             config.LastLoadedFiles.Add(copy);
         }
 
-        File.WriteAllText(Config.ConfigPath, JsonSerializer.Serialize(config, _jsonOptions));
+        File.WriteAllText(Config.ConfigPath, JsonSerializer.Serialize(config, Config.JsonOptions));
     }
     
-    public void GenerateModpack(string directory, string[] filesToCopy)
+    public ManifestInfo CreateModpack(string directory, string[] filesToCopy, string? name = null, string? author = null, string? version = null, string? iconPath = null)
     {
-        Directory.CreateDirectory(directory);
-        
         ManifestInfo manifest = new ManifestInfo(directory)
         {
-            Name = directory,
-            Author = "Dev",
+            Name = name,
+            Author = author,
+            Version = version
         };
-
+        
+        manifest.GenerateDirectories();
+        
         foreach (string file in filesToCopy)
         {
             string copy = Path.Combine(directory, Config.OverridesDirName, file.Replace(Config.GameDirectory, string.Empty));
@@ -103,14 +96,20 @@ public class ModpackService
             }
             
             File.Copy(file, copy, true);
-            manifest.Files.Add(copy);
         }
 
-        string serializedManifest = JsonSerializer.Serialize(manifest, _jsonOptions);
+        if (File.Exists(iconPath))
+        {
+            File.Copy(iconPath, Path.Combine(manifest.OriginDirectory, "pack.png"));
+        }
+
+        string serializedManifest = JsonSerializer.Serialize(manifest, Config.JsonOptions);
         File.WriteAllText(Path.Combine(directory, Config.ManifestFileName), serializedManifest);
+
+        return manifest;
     }
     
-    public bool TryReadModpack(string directory, out ManifestInfo? manifest)
+    public bool TryReadManifest(string directory, out ManifestInfo? manifest)
     {
         manifest = null;
         string[] manifests = Directory.GetFiles(directory, Config.ManifestFileName, SearchOption.TopDirectoryOnly);

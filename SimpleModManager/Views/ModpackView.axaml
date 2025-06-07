@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:SimpleModManager.ViewModels"
+             mc:Ignorable="d"
+             d:DesignWidth="800"
+             d:DesignHeight="450"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             x:Class="SimpleModManager.Views.ModpackView"
+             d:DesignSource="{d:DesignInstance vm:ModpackViewModel}">
+  <DockPanel x:DataType="{x:Type vm:ModpackViewModel}">
+    <TextBlock DockPanel.Dock="Top"
+               Classes="h5">
+      <Run Text="Name:"
+           FontWeight="Heavy" />
+      <Run Text="{Binding Name}" />
+    </TextBlock>
+    <TextBlock DockPanel.Dock="Top"
+               Classes="h5">
+      <Run Text="Author:"
+           FontWeight="Heavy" />
+      <Run Text="{Binding Author}" />
+    </TextBlock>
+    <TextBlock DockPanel.Dock="Top"
+               Classes="h5">
+      <Run Text="Directory:"
+           FontWeight="Heavy" />
+      <Run Text="{Binding ModpackDirectory}" />
+    </TextBlock>
+    <Separator DockPanel.Dock="Top" Height="1" Margin="10"/>
+    <TreeView ItemsSource="{Binding FolderContents}">
+      <TreeView.ItemTemplate>
+        <TreeDataTemplate ItemsSource="{Binding Children}">
+          <StackPanel Orientation="Horizontal">
+            <PathIcon Margin="10 0" Data="{x:Static suki:Icons.FileOpen}" IsVisible="{Binding IsDirectory}"/>
+            <TextBlock Text="{Binding Name}" />
+          </StackPanel>
+        </TreeDataTemplate>
+      </TreeView.ItemTemplate>
+    </TreeView>
+  </DockPanel>
+</UserControl>
