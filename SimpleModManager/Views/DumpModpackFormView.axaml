@@ -4,59 +4,123 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:SimpleModManager.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:services="clr-namespace:SimpleModManager.Services"
              mc:Ignorable="d"
              d:DesignWidth="800"
              d:DesignHeight="450"
              x:Class="SimpleModManager.Views.DumpModpackFormView"
              x:DataType="{x:Type viewModels:DumpModpackForm}">
-  <StackPanel>
-    <TextBox Watermark="Name"
-             UseFloatingWatermark="True"
-             Text="{Binding Name}" />
-    <TextBox Watermark="Author"
-             UseFloatingWatermark="True"
-             Text="{Binding Author}" />
-    <Grid ColumnDefinitions="1* 1*">
-      <TextBox Margin="0 0 5 0"
+  <Grid ColumnDefinitions="* *"
+        RowDefinitions="9* 1*">
+    <DockPanel DockPanel.Dock="Left"
+               Margin="10 5">
+      <TextBlock DockPanel.Dock="Top"
+                 Text="Info"
+                 HorizontalAlignment="Center"
+                 Classes="h3" />
+      <TextBox DockPanel.Dock="Top"
+               Watermark="Name"
+               UseFloatingWatermark="True"
+               Text="{Binding Name}" />
+      <TextBox DockPanel.Dock="Top"
+               Watermark="Author"
+               UseFloatingWatermark="True"
+               Text="{Binding Author}" />
+      <TextBox DockPanel.Dock="Top"
                Watermark="Version"
                UseFloatingWatermark="True"
                Text="{Binding Version}" />
       <Button x:Name="DropButton"
-              Grid.Column="1"
-              Margin="5 0 0 0"
+              Margin="0 15"
               HorizontalAlignment="Center"
-              VerticalAlignment="Bottom"
-              Classes="Outlined"
-              Content="Click or Drop png here"
+              VerticalAlignment="Center"
+              MinHeight="100"
+              MinWidth="100"
               Click="DropButton_OnClick"
               DragDrop.AllowDrop="True">
+        <Button.Template>
+          <ControlTemplate TargetType="Button">
+            <Grid>
+              <ContentPresenter Content="{TemplateBinding Content}" />
+              <Rectangle x:Name="DropZone"
+                         StrokeDashArray="16"
+                         Fill="Transparent"
+                         Stroke="White"
+                         StrokeThickness="1"
+                         RadiusX="5"
+                         RadiusY="5" />
+            </Grid>
+          </ControlTemplate>
+        </Button.Template>
         <Button.Styles>
-          <Style Selector="Button.dropping">
-            <Setter Property="BorderThickness" Value="5" />
+          <Style Selector="Button:pointerover /template/ Rectangle">
+            <Setter Property="StrokeThickness"
+                    Value="4" />
+            <Setter Property="StrokeDashArray"
+                    Value="4" />
+          </Style>
+          <Style Selector="Button.dropping /template/ Rectangle">
+            <Style.Animations>
+              <Animation Duration="0:0:1"
+                         IterationCount="INFINITE">
+                <KeyFrame Cue="0%">
+                  <Setter Property="StrokeDashOffset"
+                          Value="0" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                  <Setter Property="StrokeDashOffset"
+                          Value="32" />
+                </KeyFrame>
+                
+              </Animation>
+            </Style.Animations>
           </Style>
         </Button.Styles>
+        <Grid MaxHeight="200"
+              MaxWidth="200">
+          <Image Stretch="Uniform"
+                 ClipToBounds="True"
+                 Source="{Binding IconBitmap}" />
+          <TextBlock VerticalAlignment="Center"
+                     HorizontalAlignment="Center"
+                     Margin="10"
+                     Text="Click or drop png here"
+                     Foreground="White"
+                     IsVisible="{Binding IconBitmap, Converter={x:Static ObjectConverters.IsNull}}" />
+        </Grid>
       </Button>
-    </Grid>
-    <TreeView Margin="0 10"
-              ItemsSource="{Binding FolderItems}"
-              MaxHeight="300">
-      <TreeView.ItemTemplate>
-        <TreeDataTemplate ItemsSource="{Binding Children}">
-          <StackPanel Orientation="Horizontal">
-            <CheckBox IsChecked="{Binding IsChecked}" />
-            <PathIcon Margin="10 0 5 0"
-                      Data="{x:Static suki:Icons.FileOpen}"
-                      IsVisible="{Binding IsDirectory}" />
-            <TextBlock Margin="5 0"
-                       Text="{Binding Name}" />
-          </StackPanel>
-        </TreeDataTemplate>
-      </TreeView.ItemTemplate>
-    </TreeView>
-    <Button Margin="10"
+    </DockPanel>
+    <DockPanel Grid.Column="1"
+               Grid.Row="0"
+               Margin="10 5">
+      <TextBlock DockPanel.Dock="Top"
+                 Text="Files"
+                 HorizontalAlignment="Center"
+                 Classes="h3" />
+      <TreeView MaxHeight="300"
+                ItemsSource="{Binding FolderItems}">
+        <TreeView.ItemTemplate>
+          <TreeDataTemplate ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal">
+              <CheckBox IsChecked="{Binding IsChecked}" />
+              <PathIcon Margin="10 0 5 0"
+                        Data="{x:Static suki:Icons.FileOpen}"
+                        IsVisible="{Binding IsDirectory}" />
+              <TextBlock Margin="5 0"
+                         Text="{Binding Name}" />
+            </StackPanel>
+          </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+      </TreeView>
+    </DockPanel>
+    <Button Grid.Row="1"
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            Margin="5"
             HorizontalAlignment="Center"
+            VerticalAlignment="Center"
             Classes="Rounded Accent Flat"
             Content="Dump"
             Command="{Binding Dismiss}" />
-  </StackPanel>
+  </Grid>
 </UserControl>

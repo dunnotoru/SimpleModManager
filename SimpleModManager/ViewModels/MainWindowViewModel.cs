@@ -133,7 +133,7 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
         _watcher.Created -= OnCreated;
         
         string[] filesToCopy = FolderTreeLoader.GetAllItems(result.FolderItems)
-            .Where(i => i.IsChecked && i.IsDirectory == false)
+            .Where(i => i is { IsChecked: true, IsDirectory: false })
             .Select(i => i.Path).ToArray();
         
         try

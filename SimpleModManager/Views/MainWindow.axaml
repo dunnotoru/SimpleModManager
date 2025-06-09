@@ -11,7 +11,7 @@
                  d:DesignHeight="1080"
                  x:Class="SimpleModManager.Views.MainWindow"
                  x:DataType="vm:MainWindowViewModel"
-                 Icon="/Assets/avalonia-logo.ico"
+                 Icon="/Assets/icon.ico"
                  Title="SimpleModManager"
                  BackgroundStyle="Flat"
                  IsMenuVisible="True">

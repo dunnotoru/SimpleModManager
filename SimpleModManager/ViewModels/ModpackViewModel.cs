@@ -37,16 +37,20 @@ public class ModpackViewModel : ViewModelBase, IActivatableViewModel
         this.WhenActivated((CompositeDisposable d) =>
         {
             Debug.WriteLine("MODPACK ACTIVATED YAYYYYYY");
-            Directory.CreateDirectory(ModpackDirectory);
-            FolderContents = new ObservableCollection<FolderItem>(FolderTreeLoader.LoadFolderContents(ModpackDirectory));
-            string iconPath = Path.Combine(ModpackDirectory, "icon.png");
-            if (File.Exists(iconPath))
-            {
-                Logo = new Bitmap(iconPath);
-            }
+            LoadFolderContents();
         });
     }
-    
+
+    public void LoadFolderContents()
+    {
+        Directory.CreateDirectory(ModpackDirectory);
+        FolderContents = new ObservableCollection<FolderItem>(FolderTreeLoader.LoadFolderContents(ModpackDirectory));
+        string iconPath = Path.Combine(ModpackDirectory, "pack.png");
+        if (File.Exists(iconPath))
+        {
+            Logo = new Bitmap(iconPath);
+        }
+    }
     
     public ObservableCollection<FolderItem> FolderContents
     {

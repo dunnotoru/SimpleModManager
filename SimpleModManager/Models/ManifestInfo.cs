@@ -26,7 +26,7 @@ public class ManifestInfo
     {
         Directory.CreateDirectory(OriginDirectory);
         Directory.CreateDirectory(OverrideDirectory);
-        string json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+        string json = JsonSerializer.Serialize(this, Config.JsonOptions);
         File.WriteAllText(Path.Combine(OriginDirectory, Config.ManifestFileName), json);
     }
 }

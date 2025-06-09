@@ -21,7 +21,6 @@ public partial class MainWindow : SukiWindow, IViewFor<MainWindowViewModel>
             ViewModel?.Activator.Activate();
             Debug.WriteLine($"DATA CONTEXT {DataContext}");
             Debug.WriteLine($"VIEWMODEL {ViewModel}");
-
             ViewModel?.DumpInteraction.RegisterHandler(DumpModpackHandler);
         });
     }

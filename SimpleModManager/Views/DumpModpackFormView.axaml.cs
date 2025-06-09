@@ -7,6 +7,7 @@ using System.Reactive.Disposables;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.ReactiveUI;
 using ReactiveUI;
@@ -23,7 +24,7 @@ public partial class DumpModpackFormView : ReactiveUserControl<DumpModpackForm>
         this.WhenActivated(d =>
         {
             this.WhenAnyValue(v => v.DataContext).BindTo(this, v => v.ViewModel);
-
+            
             DropButton.AddDisposableHandler(DragDrop.DropEvent, (s, e) =>
             {
                 string? iconPath = e.Data.GetFiles()?.FirstOrDefault()?.Path.AbsolutePath;
@@ -34,6 +35,7 @@ public partial class DumpModpackFormView : ReactiveUserControl<DumpModpackForm>
         
                 DropButton.Classes.Remove("dropping");
             }).DisposeWith(d);
+            
             DropButton.AddDisposableHandler(DragDrop.DragOverEvent, (s, e) =>
             {
                 e.DragEffects = ValidateDrop(e);
@@ -93,7 +95,7 @@ public partial class DumpModpackFormView : ReactiveUserControl<DumpModpackForm>
 
         if (result.Count == 1)
         {
-            ViewModel!.IconPath = result[0].Path.AbsolutePath;
+            ViewModel!.IconPath = result[0].Path.LocalPath;
             Debug.WriteLine($"{ViewModel.IconPath}");
         }
     }
