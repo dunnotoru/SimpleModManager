@@ -8,6 +8,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using ReactiveUI;
+using ReactiveUI.SourceGenerators;
 using SimpleModManager.Models;
 using SimpleModManager.Services;
 using SukiUI.Dialogs;
@@ -15,24 +16,12 @@ using SukiUI.Toasts;
 
 namespace SimpleModManager.ViewModels;
 
-public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
+public partial class MainWindowViewModel : ViewModelBase, IActivatableViewModel
 {
     public ViewModelActivator Activator { get; } = new ViewModelActivator();
-    public Interaction<Unit, DumpModpackForm> DumpInteraction { get; } = new Interaction<Unit, DumpModpackForm>(); 
 
-    private ObservableCollection<ModpackViewModel> _modpacks = new ObservableCollection<ModpackViewModel>();
-    public ObservableCollection<ModpackViewModel> Modpacks
-    {
-        get => _modpacks;
-        set => this.RaiseAndSetIfChanged(ref _modpacks, value);
-    }
-
-    private ModpackViewModel? _selectedModpack;
-    public ModpackViewModel? SelectedModpack
-    {
-        get => _selectedModpack;
-        set => this.RaiseAndSetIfChanged(ref _selectedModpack, value);
-    }
+    [Reactive] private ObservableCollection<ModpackViewModel> _modpacks = new ObservableCollection<ModpackViewModel>();
+    [Reactive] private ModpackViewModel? _selectedModpack;
 
     public ReactiveCommand<ModpackViewModel, Unit> LoadModpack { get; }
     public ReactiveCommand<Unit, Unit> DumpCurrent { get; }
@@ -49,12 +38,11 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
         IObservable<bool> isSelected = this.WhenAnyValue(vm => vm.SelectedModpack).Select(s => s is not null);
         LoadModpack = ReactiveCommand.Create<ModpackViewModel>(LoadModpackImpl, isSelected);
         OpenDirectory = ReactiveCommand.Create<ModpackViewModel>(OpenDirectoryImpl, isSelected);
-        
         DumpCurrent = ReactiveCommand.CreateFromTask(DumpCurrentImpl);
 
         _modpackService = new ModpackService();
         _watcher = new FileSystemWatcher();
-        
+
         this.WhenActivated(d =>
         {
             Debug.WriteLine("MAIN VIEWMODEL ACTIVATED");
@@ -66,6 +54,8 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
             _watcher.IncludeSubdirectories = true;
             _watcher.EnableRaisingEvents = true;
             _watcher.DisposeWith(d);
+
+
             ScanStorage();
         });
     }
@@ -83,7 +73,9 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
         {
             if (_modpackService.TryReadManifest(dir, out ManifestInfo? manifest))
             {
-                Modpacks.Add(new ModpackViewModel(manifest!));
+                ModpackViewModel pack = new ModpackViewModel(manifest!);
+                Modpacks.Add(pack);
+                pack.Activator.Activate();
             }
             else
             {
@@ -106,6 +98,7 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
         ModpackViewModel? stored = Modpacks.FirstOrDefault(m => m.ModpackDirectory == e.FullPath);
         if (stored is not null)
         {
+            stored.Activator.Deactivate();
             Modpacks.Remove(stored);
         }
     }
@@ -116,29 +109,38 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
 
         if (_modpackService.TryReadManifest(e.FullPath, out ManifestInfo? manifest))
         {
-            Modpacks.Add(new ModpackViewModel(manifest!));
+            ModpackViewModel pack = new ModpackViewModel(manifest!);
+            Modpacks.Add(pack);
+            pack.Activator.Activate();
         }
     }
 
     private async Task DumpCurrentImpl()
     {
-        DumpModpackForm result = await DumpInteraction.Handle(Unit.Default);
+        SukiDialogBuilder builder = DialogManager.CreateDialog();
+        DumpModpackForm form = new DumpModpackForm(builder.Dialog);
 
-        if (result.Dump == false)
+        await builder.WithViewModel(_ => form)
+            .WithOkResult(null)
+            .Dismiss().ByClickingBackground()
+            .TryShowAsync();
+
+        if (form.Dump == false)
         {
             return;
         }
-        
-        string path = Path.Combine(Config.StorageDirectory, result.Name);
+
+        string path = Path.Combine(Config.StorageDirectory, form.Name);
         _watcher.Created -= OnCreated;
-        
-        string[] filesToCopy = FolderTreeLoader.GetAllItems(result.FolderItems)
+
+        string[] filesToCopy = FolderTreeLoader.GetAllItems(form.FolderItems)
             .Where(i => i is { IsChecked: true, IsDirectory: false })
             .Select(i => i.Path).ToArray();
-        
+
         try
         {
-            ManifestInfo manifest = _modpackService.CreateModpack(path, filesToCopy, result.Name, result.Author, result.Version, iconPath: result.IconPath);
+            ManifestInfo manifest = _modpackService.CreateModpack(path, filesToCopy, form.Name, form.Author,
+                form.Version, iconPath: form.IconPath);
             Modpacks.Add(new ModpackViewModel(manifest));
             ToastManager.CreateToast()
                 .WithTitle("Success")

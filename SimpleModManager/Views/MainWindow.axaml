@@ -29,7 +29,7 @@
 
   <suki:SukiWindow.Hosts>
     <suki:SukiToastHost Manager="{Binding ToastManager}" />
-    <suki:SukiDialogHost x:Name="DialogHost">
+    <suki:SukiDialogHost Manager="{Binding DialogManager}">
       <suki:SukiDialogHost.DataTemplates>
         <DataTemplate DataType="{x:Type vm:DumpModpackForm}">
           <views:DumpModpackFormView />
@@ -57,6 +57,7 @@
                          Margin="5"
                          Width="100"
                          Height="100"
+                         RenderOptions.BitmapInterpolationMode="LowQuality"
                          Source="{Binding Logo}"
                          Stretch="Fill" />
                   <TextBlock Margin="5"
@@ -70,13 +71,6 @@
         </suki:BusyArea>
       </suki:GroupBox>
     </suki:GlassCard>
-
-    <StackPanel Grid.Column="1"
-                Grid.Row="0"
-                Margin="0 10 0 0"
-                Orientation="Horizontal">
-
-    </StackPanel>
 
     <suki:GlassCard Grid.Column="1"
                     Margin="10">
