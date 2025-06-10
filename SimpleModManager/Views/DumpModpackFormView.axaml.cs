@@ -7,7 +7,6 @@ using System.Reactive.Disposables;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.ReactiveUI;
 using ReactiveUI;
@@ -92,7 +91,7 @@ public partial class DumpModpackFormView : ReactiveUserControl<DumpModpackForm>
             FileTypeFilter = [FilePickerFileTypes.ImagePng],
             Title = "Select logo image",
         });
-
+        
         if (result.Count == 1)
         {
             ViewModel!.IconPath = result[0].Path.LocalPath;

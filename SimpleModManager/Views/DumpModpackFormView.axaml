@@ -5,6 +5,7 @@
              xmlns:viewModels="clr-namespace:SimpleModManager.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:services="clr-namespace:SimpleModManager.Services"
+             xmlns:converters="clr-namespace:SimpleModManager.Converters"
              mc:Ignorable="d"
              d:DesignWidth="800"
              d:DesignHeight="450"
@@ -71,7 +72,6 @@
                   <Setter Property="StrokeDashOffset"
                           Value="32" />
                 </KeyFrame>
-                
               </Animation>
             </Style.Animations>
           </Style>
@@ -80,13 +80,13 @@
               MaxWidth="200">
           <Image Stretch="Uniform"
                  ClipToBounds="True"
-                 Source="{Binding IconBitmap}" />
+                 Source="{Binding IconPath, Converter={x:Static converters:CommonConverters.PathToBitmapConverter}}" />
           <TextBlock VerticalAlignment="Center"
                      HorizontalAlignment="Center"
                      Margin="10"
                      Text="Click or drop png here"
                      Foreground="White"
-                     IsVisible="{Binding IconBitmap, Converter={x:Static ObjectConverters.IsNull}}" />
+                     IsVisible="{Binding IconPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
         </Grid>
       </Button>
     </DockPanel>

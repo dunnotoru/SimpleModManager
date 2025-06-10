@@ -23,6 +23,10 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.0"/>
+    <PackageReference Include="ReactiveUI.SourceGenerators" Version="2.2.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="SukiUI" Version="6.0.2" />
   </ItemGroup>
 
