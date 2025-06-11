@@ -6,6 +6,8 @@
                  xmlns:rxui="http://reactiveui.net"
                  xmlns:suki="https://github.com/kikipoulet/SukiUI"
                  xmlns:views="clr-namespace:SimpleModManager.Views"
+                 xmlns:system="clr-namespace:System;assembly=System.Runtime"
+                 xmlns:utils="clr-namespace:SimpleModManager.Utils"
                  mc:Ignorable="d"
                  d:DesignWidth="1920"
                  d:DesignHeight="1080"
@@ -28,7 +30,13 @@
   </suki:SukiWindow.MenuItems>
 
   <suki:SukiWindow.Hosts>
-    <suki:SukiToastHost Manager="{Binding ToastManager}" />
+    <suki:SukiToastHost Manager="{Binding ToastManager}">
+      <suki:SukiToastHost.DataTemplates>
+        <DataTemplate DataType="{x:Type utils:CopyProgressViewModel}">
+          <ProgressBar Value="{Binding Value}"/>
+        </DataTemplate>
+      </suki:SukiToastHost.DataTemplates>
+    </suki:SukiToastHost>
     <suki:SukiDialogHost Manager="{Binding DialogManager}">
       <suki:SukiDialogHost.DataTemplates>
         <DataTemplate DataType="{x:Type vm:DumpModpackForm}">
@@ -46,7 +54,7 @@
           <TextBlock Classes="h4"
                      Text="Detected modpacks" />
         </suki:GroupBox.Header>
-        <suki:BusyArea IsBusy="{Binding !Modpacks.Count}">
+        <suki:BusyArea IsBusy="{Binding !IsModpacksLoaded}">
           <ListBox ItemsSource="{Binding Modpacks}"
                    SelectedItem="{Binding SelectedModpack}"
                    SelectionMode="Single">

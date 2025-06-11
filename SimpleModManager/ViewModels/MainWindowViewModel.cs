@@ -11,6 +11,7 @@ using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using SimpleModManager.Models;
 using SimpleModManager.Services;
+using SimpleModManager.Utils;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
@@ -22,6 +23,9 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
 
     [Reactive] private ObservableCollection<ModpackViewModel> _modpacks = new ObservableCollection<ModpackViewModel>();
     [Reactive] private ModpackViewModel? _selectedModpack;
+    [Reactive] private bool _isBusyDumping;
+    [Reactive] private bool _isBusyLoading;
+    [Reactive] private bool _isModpacksLoaded;
 
     public ReactiveCommand<ModpackViewModel, Unit> LoadModpack { get; }
     public ReactiveCommand<Unit, Unit> DumpCurrent { get; }
@@ -32,16 +36,17 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
 
     private readonly FileSystemWatcher _watcher;
     private readonly ModpackService _modpackService;
-
+    
     public MainWindowViewModel()
     {
-        IObservable<bool> isSelected = this.WhenAnyValue(vm => vm.SelectedModpack).Select(s => s is not null);
-        LoadModpack = ReactiveCommand.Create<ModpackViewModel>(LoadModpackImpl, isSelected);
-        OpenDirectory = ReactiveCommand.Create<ModpackViewModel>(OpenDirectoryImpl, isSelected);
-        DumpCurrent = ReactiveCommand.CreateFromTask(DumpCurrentImpl);
-
         _modpackService = new ModpackService();
         _watcher = new FileSystemWatcher();
+        
+        IObservable<bool> isSelected = this.WhenAnyValue(vm => vm.SelectedModpack).Select(s => s is not null);
+        OpenDirectory = ReactiveCommand.Create<ModpackViewModel>(OpenDirectoryImpl, isSelected);
+
+        LoadModpack = ReactiveCommand.CreateFromTask<ModpackViewModel>(LoadModpackImpl, isSelected);
+        DumpCurrent = ReactiveCommand.CreateFromTask(DumpCurrentImpl, LoadModpack.IsExecuting.Select(x => !x));
 
         this.WhenActivated(d =>
         {
@@ -54,7 +59,6 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
             _watcher.IncludeSubdirectories = true;
             _watcher.EnableRaisingEvents = true;
             _watcher.DisposeWith(d);
-
 
             ScanStorage();
         });
@@ -85,6 +89,8 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
                     .WithContent(dir);
             }
         }
+
+        IsModpacksLoaded = true;
     }
 
     private void OnDeleted(object sender, FileSystemEventArgs e)
@@ -137,10 +143,22 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
             .Where(i => i is { IsChecked: true, IsDirectory: false })
             .Select(i => i.Path).ToArray();
 
+        Progress<double> progress = new Progress<double>();
+        ISukiToast loadingToast = ToastManager.CreateToast()
+            .WithTitle("Copying files...")
+            .WithContent(new CopyProgressViewModel(progress))
+            .Toast;
+        
         try
         {
-            ManifestInfo manifest = _modpackService.CreateModpack(path, filesToCopy, form.Name, form.Author,
-                form.Version, iconPath: form.IconPath);
+            ToastManager.Queue(loadingToast);
+            ManifestInfo manifest = await _modpackService.CreateModpackAsync(progress,
+                path,
+                filesToCopy,
+                form.Name,
+                form.Author,
+                form.Version,
+                form.IconPath);
             Modpacks.Add(new ModpackViewModel(manifest));
             ToastManager.CreateToast()
                 .WithTitle("Success")
@@ -157,24 +175,36 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
         }
         finally
         {
+            ToastManager.Dismiss(loadingToast);
             _watcher.Created += OnCreated;
         }
     }
 
-    private void LoadModpackImpl(ModpackViewModel modpackViewModel)
+    private async Task LoadModpackImpl(ModpackViewModel modpackViewModel)
     {
         SukiToastBuilder toast = ToastManager.CreateToast()
             .Dismiss().After(TimeSpan.FromSeconds(2));
 
+        Progress<double> progress = new Progress<double>();
+        ISukiToast loadingToast = ToastManager.CreateToast()
+            .WithTitle("Copying files...")
+            .WithContent(new CopyProgressViewModel(progress))
+            .Toast;
+
         try
         {
-            _modpackService.LoadModpack(modpackViewModel.Manifest);
+            ToastManager.Queue(loadingToast);
+            await _modpackService.LoadModpackAsync(progress, modpackViewModel.Manifest);
             toast.SetTitle("Success");
         }
         catch (Exception ex)
         {
             toast.SetTitle("Error while loading modpack");
             Debug.WriteLine(ex);
+        }
+        finally
+        {
+            ToastManager.Dismiss(loadingToast);
         }
 
         toast.Queue();

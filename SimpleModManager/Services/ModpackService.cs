@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using SimpleModManager.Models;
 
 namespace SimpleModManager.Services;
@@ -30,11 +31,11 @@ public class ModpackService
             }
         }
     }
-    
-    public void LoadModpack(ManifestInfo manifest)
+
+    public async Task LoadModpackAsync(IProgress<double> progress, ManifestInfo manifest)
     {
         EnsureDataDirectoryCreated();
-        string json = File.ReadAllText(Config.ConfigPath);
+        string json = await File.ReadAllTextAsync(Config.ConfigPath);
         ConfigData config = JsonSerializer.Deserialize<ConfigData>(json) ?? new ConfigData();
 
         foreach (string file in config.LastLoadedFiles.ToList())
@@ -56,26 +57,37 @@ public class ModpackService
                 config.LastLoadedFiles.Remove(file);
             }
         }
-        
-        string[] files = Directory.GetFiles(manifest.OverrideDirectory, "*.*", SearchOption.AllDirectories);
-        foreach (string file in files)
-        {
-            string copy = file.Replace(manifest.OverrideDirectory, Config.GameDirectory);
-            string? dir = Path.GetDirectoryName(copy);
-            Debug.WriteLine(dir);
-            if (dir is not null)
-            {
-                Directory.CreateDirectory(dir);
-            }
-            
-            File.Copy(file, copy, true);
-            config.LastLoadedFiles.Add(copy);
-        }
 
-        File.WriteAllText(Config.ConfigPath, JsonSerializer.Serialize(config, Config.JsonOptions));
+        
+        await Task.Run(() =>
+        {
+            string[] files = Directory.GetFiles(manifest.OverrideDirectory, "*.*", SearchOption.AllDirectories);
+            double step = 90.0 / files.Length;
+            for (var i = 0; i < files.Length; i++)
+            {
+                var file = files[i];
+                string relativePath = Path.GetRelativePath(manifest.OverrideDirectory, file);
+                string copy = Path.Combine(Config.GameDirectory, relativePath);
+                string? dir = Path.GetDirectoryName(copy);
+                Debug.WriteLine(dir);
+                if (dir is not null)
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                File.Copy(file, copy, true);
+                config.LastLoadedFiles.Add(copy);
+                progress.Report(i * step);
+            }
+        });
+
+        await File.WriteAllTextAsync(Config.ConfigPath, JsonSerializer.Serialize(config, Config.JsonOptions));
+        progress.Report(100);
     }
-    
-    public ManifestInfo CreateModpack(string directory, string[] filesToCopy, string? name = null, string? author = null, string? version = null, string? iconPath = null)
+
+    public async Task<ManifestInfo> CreateModpackAsync(IProgress<double> progress, string directory,
+        string[] filesToCopy, string? name = null,
+        string? author = null, string? version = null, string? iconPath = null)
     {
         ManifestInfo manifest = new ManifestInfo(directory)
         {
@@ -83,32 +95,41 @@ public class ModpackService
             Author = author,
             Version = version
         };
-        
+
         manifest.GenerateDirectories();
         
-        foreach (string file in filesToCopy)
-        {
-            string copy = Path.Combine(directory, Config.OverridesDirName, file.Replace(Config.GameDirectory, string.Empty));
-            string? dir = Path.GetDirectoryName(copy);
-            if (dir is not null)
-            {
-                Directory.CreateDirectory(dir);
-            }
-            
-            File.Copy(file, copy, true);
-        }
+        double step = 90.0 / filesToCopy.Length;
 
-        if (File.Exists(iconPath))
+        await Task.Run(() =>
         {
-            File.Copy(iconPath, Path.Combine(manifest.OriginDirectory, "pack.png"));
-        }
+            for (var i = 0; i < filesToCopy.Length; i++)
+            {
+                var file = filesToCopy[i];
+                string relativePath = Path.GetRelativePath(Config.GameDirectory, file);
+                string copy = Path.Combine(directory, Config.OverridesDirName, relativePath);
+                string? dir = Path.GetDirectoryName(copy);
+                if (dir is not null)
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                File.Copy(file, copy, true);
+                progress.Report(i * step);
+            }
+    
+            if (File.Exists(iconPath))
+            {
+                File.Copy(iconPath, Path.Combine(manifest.OriginDirectory, "pack.png"));
+            }
+        });
 
         string serializedManifest = JsonSerializer.Serialize(manifest, Config.JsonOptions);
-        File.WriteAllText(Path.Combine(directory, Config.ManifestFileName), serializedManifest);
+        await File.WriteAllTextAsync(Path.Combine(directory, Config.ManifestFileName), serializedManifest);
+        progress.Report(100);
 
         return manifest;
     }
-    
+
     public bool TryReadManifest(string directory, out ManifestInfo? manifest)
     {
         manifest = null;
@@ -126,7 +147,7 @@ public class ModpackService
             {
                 return false;
             }
-            
+
             manifest.OriginDirectory = directory;
         }
         catch (Exception ex)
