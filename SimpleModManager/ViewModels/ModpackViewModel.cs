@@ -13,7 +13,7 @@ using SimpleModManager.Services;
 
 namespace SimpleModManager.ViewModels;
 
-public partial class ModpackViewModel : ViewModelBase, IActivatableViewModel
+public partial class ModpackViewModel : ReactiveObject, IActivatableViewModel
 {
     public ViewModelActivator Activator { get; } = new ViewModelActivator();
     public ManifestInfo Manifest { get; }
@@ -39,10 +39,11 @@ public partial class ModpackViewModel : ViewModelBase, IActivatableViewModel
         LoadFolderContents = ReactiveCommand.CreateFromTask(LoadFolderContentsImpl);
 
         Debug.WriteLine("MODPACK CTOR YAYYYYYY");
-        this.WhenActivated((CompositeDisposable _) =>
+        this.WhenActivated(d =>
         {
             Debug.WriteLine("MODPACK ACTIVATED YAYYYYYY");
             LoadFolderContents.Execute().Subscribe();
+            Logo?.DisposeWith(d);
         });
     }
 
@@ -61,11 +62,5 @@ public partial class ModpackViewModel : ViewModelBase, IActivatableViewModel
                 Logo = new Bitmap(iconPath);
             }
         });
-    }
-
-    protected override void Dispose(bool dispoing)
-    {
-        Logo?.Dispose();
-        base.Dispose(dispoing);
     }
 }

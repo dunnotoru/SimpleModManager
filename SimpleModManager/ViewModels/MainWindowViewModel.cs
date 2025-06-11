@@ -16,7 +16,7 @@ using SukiUI.Toasts;
 
 namespace SimpleModManager.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase, IActivatableViewModel
+public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
 {
     public ViewModelActivator Activator { get; } = new ViewModelActivator();
 

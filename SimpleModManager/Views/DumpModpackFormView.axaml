@@ -121,6 +121,6 @@
             VerticalAlignment="Center"
             Classes="Rounded Accent Flat"
             Content="Dump"
-            Command="{Binding Dismiss}" />
+            Command="{Binding Submit}" />
   </Grid>
 </UserControl>

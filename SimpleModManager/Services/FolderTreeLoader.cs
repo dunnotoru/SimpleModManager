@@ -44,7 +44,7 @@ public class FolderTreeLoader
     }
 }
 
-public class FolderItem : ViewModelBase
+public class FolderItem : ReactiveObject
 {
     public string Name { get; }
     public string Path { get; }
