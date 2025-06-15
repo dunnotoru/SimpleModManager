@@ -32,7 +32,7 @@
   <suki:SukiWindow.Hosts>
     <suki:SukiToastHost Manager="{Binding ToastManager}">
       <suki:SukiToastHost.DataTemplates>
-        <DataTemplate DataType="{x:Type utils:CopyProgressViewModel}">
+        <DataTemplate DataType="{x:Type utils:CopyProgressValue}">
           <ProgressBar Value="{Binding Value}"/>
         </DataTemplate>
       </suki:SukiToastHost.DataTemplates>

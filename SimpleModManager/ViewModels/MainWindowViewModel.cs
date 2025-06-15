@@ -39,7 +39,7 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
     
     public MainWindowViewModel()
     {
-        _modpackService = new ModpackService();
+        _modpackService = new ModpackService(new ConfigProvider());
         _watcher = new FileSystemWatcher();
         
         IObservable<bool> isSelected = this.WhenAnyValue(vm => vm.SelectedModpack).Select(s => s is not null);
@@ -51,9 +51,9 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
         this.WhenActivated(d =>
         {
             Debug.WriteLine("MAIN VIEWMODEL ACTIVATED");
-            _modpackService.EnsureDataDirectoryCreated();
 
-            _watcher.Path = Config.StorageDirectory;
+            Directory.CreateDirectory(AppConstants.StorageDirectory);
+            _watcher.Path = AppConstants.StorageDirectory;
             _watcher.Created += OnCreated;
             _watcher.Deleted += OnDeleted;
             _watcher.IncludeSubdirectories = true;
@@ -71,13 +71,14 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
 
     private void ScanStorage()
     {
-        _modpackService.EnsureDataDirectoryCreated();
-        string[] directories = Directory.GetDirectories(Config.StorageDirectory);
+        Directory.CreateDirectory(AppConstants.StorageDirectory);
+        string[] directories = Directory.GetDirectories(AppConstants.StorageDirectory);
         foreach (string dir in directories)
         {
-            if (_modpackService.TryReadManifest(dir, out ManifestInfo? manifest))
+            string path = Path.Combine(dir, AppConstants.ManifestFileName);
+            if (_modpackService.TryReadManifest(path, out ManifestInfo? manifest))
             {
-                ModpackViewModel pack = new ModpackViewModel(manifest!);
+                ModpackViewModel pack = new ModpackViewModel(manifest);
                 Modpacks.Add(pack);
                 pack.Activator.Activate();
             }
@@ -95,9 +96,9 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
 
     private void OnDeleted(object sender, FileSystemEventArgs e)
     {
-        if (e.FullPath == Config.StorageDirectory)
+        if (e.FullPath == AppConstants.StorageDirectory)
         {
-            _modpackService.EnsureDataDirectoryCreated();
+            Directory.CreateDirectory(AppConstants.StorageDirectory);
             return;
         }
 
@@ -125,7 +126,6 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
     {
         SukiDialogBuilder builder = DialogManager.CreateDialog();
         DumpModpackForm form = new DumpModpackForm(builder.Dialog);
-
         await builder.WithViewModel(_ => form)
             .WithOkResult(null)
             .Dismiss().ByClickingBackground()
@@ -136,34 +136,44 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
             return;
         }
 
-        string path = Path.Combine(Config.StorageDirectory, form.Name);
+
+        CopyProgressValue progress = new CopyProgressValue();
+        ISukiToast loadingToast = ToastManager.CreateToast()
+            .WithTitle("Copying files...")
+            .WithContent(progress)
+            .Toast;
+        
+        ToastManager.Queue(loadingToast);
+        
+        string path = Path.Combine(AppConstants.StorageDirectory, form.Name);
         _watcher.Created -= OnCreated;
 
         string[] filesToCopy = FolderTreeLoader.GetAllItems(form.FolderItems)
             .Where(i => i is { IsChecked: true, IsDirectory: false })
             .Select(i => i.Path).ToArray();
-
-        Progress<double> progress = new Progress<double>();
-        ISukiToast loadingToast = ToastManager.CreateToast()
-            .WithTitle("Copying files...")
-            .WithContent(new CopyProgressViewModel(progress))
-            .Toast;
+        
+        ManifestInfo manifest = new ManifestInfo(path)
+        {
+            Name = form.Name,
+            Author = form.Author,
+            Version = form.Version,
+        };
         
         try
         {
-            ToastManager.Queue(loadingToast);
-            ManifestInfo manifest = await _modpackService.CreateModpackAsync(progress,
-                path,
-                filesToCopy,
-                form.Name,
-                form.Author,
-                form.Version,
-                form.IconPath);
-            Modpacks.Add(new ModpackViewModel(manifest));
-            ToastManager.CreateToast()
-                .WithTitle("Success")
-                .Dismiss().After(TimeSpan.FromSeconds(2))
-                .Queue();
+            _modpackService.GenerateModpackFileStructure(manifest);
+
+            double step = 90.0 / filesToCopy.Length;
+            for (int i = 0; i < filesToCopy.Length; i++)
+            {
+                _modpackService.CopyFileWithStructure(manifest.OverrideDirectory, AppConstants.GameDirectory, filesToCopy[i]);
+                progress.Report(step * i);
+            }
+
+            if (form.IconPath is not null)
+            {
+                File.Copy(form.IconPath, Path.Combine(manifest.OriginDirectory, AppConstants.IconName));
+            }
         }
         catch (Exception ex)
         {
@@ -172,12 +182,19 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
                 .WithTitle("Error while dumping current modpack")
                 .Dismiss().After(TimeSpan.FromSeconds(2))
                 .Queue();
+            return;
         }
         finally
         {
             ToastManager.Dismiss(loadingToast);
             _watcher.Created += OnCreated;
         }
+        
+        Modpacks.Add(new ModpackViewModel(manifest));
+        ToastManager.CreateToast()
+            .WithTitle("Success")
+            .Dismiss().After(TimeSpan.FromSeconds(2))
+            .Queue();
     }
 
     private async Task LoadModpackImpl(ModpackViewModel modpackViewModel)
@@ -185,16 +202,26 @@ public partial class MainWindowViewModel : ReactiveObject, IActivatableViewModel
         SukiToastBuilder toast = ToastManager.CreateToast()
             .Dismiss().After(TimeSpan.FromSeconds(2));
 
-        Progress<double> progress = new Progress<double>();
+        CopyProgressValue progress = new CopyProgressValue();
         ISukiToast loadingToast = ToastManager.CreateToast()
             .WithTitle("Copying files...")
-            .WithContent(new CopyProgressViewModel(progress))
+            .WithContent(progress)
             .Toast;
 
+        ToastManager.Queue(loadingToast);
+        ManifestInfo manifest = modpackViewModel.Manifest;
+        string[] filesToCopy = Directory.GetFiles(manifest.OverrideDirectory, "*.*", SearchOption.AllDirectories);
+        await _modpackService.ClearLoadedFilesAsync();
+        await _modpackService.AddLastLoadedFilesAsync(filesToCopy);
         try
         {
-            ToastManager.Queue(loadingToast);
-            await _modpackService.LoadModpackAsync(progress, modpackViewModel.Manifest);
+            double step = 90.0 / filesToCopy.Length;
+            for (int i = 0; i < filesToCopy.Length; i++)
+            {
+                _modpackService.CopyFileWithStructure(AppConstants.GameDirectory, manifest.OverrideDirectory, filesToCopy[i]);
+                progress.Report(step * i);
+            }
+
             toast.SetTitle("Success");
         }
         catch (Exception ex)

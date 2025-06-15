@@ -39,7 +39,7 @@ public partial class DumpModpackForm : ReactiveValidationObject, IActivatableVie
         {
             Debug.WriteLine("DUMP FORM ACTIVATED");
             FolderItems =
-                new ObservableCollection<FolderItem>(FolderTreeLoader.LoadFolderContents(Config.GameDirectory));
+                new ObservableCollection<FolderItem>(FolderTreeLoader.LoadFolderContents(AppConstants.GameDirectory));
         });
         
         SetupValidationRules();
@@ -50,7 +50,7 @@ public partial class DumpModpackForm : ReactiveValidationObject, IActivatableVie
         this.ValidationRule(vm => vm.Name, n => !string.IsNullOrWhiteSpace(n), "No name(");
         this.ValidationRule(vm => vm.Name, n => n!.Length < 30, "Too long name");
         this.ValidationRule(vm => vm.Name, n => n is not null && FileNameRegex().IsMatch(n), "Bad bad bad name");
-        this.ValidationRule(vm => vm.Name, n => !Directory.Exists(Path.Combine(Config.StorageDirectory, n!)), "Already Exists");
+        this.ValidationRule(vm => vm.Name, n => !Directory.Exists(Path.Combine(AppConstants.StorageDirectory, n!)), "Already Exists");
         
         this.ValidationRule(vm => vm.Author, a => a!.Length < 30, "Too long Author name");
         this.ValidationRule(vm => vm.Version, v => v!.Length < 30, "Too long Version");

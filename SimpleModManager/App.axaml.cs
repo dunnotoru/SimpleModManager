@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using SimpleModManager.Services;
 using SimpleModManager.ViewModels;
 using SimpleModManager.Views;
+using Splat;
 
 namespace SimpleModManager;
 
