@@ -31,7 +31,7 @@ public class ConfigProvider
         {
             Debug.WriteLine("NO WAY JSON EXCEPTION WHILE READING CONFIG. CREATING BACKUP BRO");
             string copy = Path.GetFullPath(AppConstants.ConfigPath);
-            string copyWithoutExt = Path.GetFileNameWithoutExtension(copy);
+            string copyWithoutExt = Path.ChangeExtension(copy, null);
             string ext = Path.GetExtension(copy);
             copy = copyWithoutExt + "_backup_" + DateTime.Now.ToString("ddMMyyyyHHmmss") + ext;
             File.Copy(AppConstants.ConfigPath, copy);
@@ -44,7 +44,7 @@ public class ConfigProvider
 
     public async Task SaveAsync(Config config)
     {
-        await using FileStream fs = File.Open(AppConstants.ConfigPath, FileMode.OpenOrCreate);
+        await using FileStream fs = File.Open(AppConstants.ConfigPath, FileMode.Create);
         await JsonSerializer.SerializeAsync(fs, config, AppConstants.JsonOptions);
     }
 }
